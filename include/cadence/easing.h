@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 namespace Cadence {
 
@@ -14,10 +15,14 @@ enum class Easing {
     InOutCubic,
     OutQuint,
     OutSine,
+    InOutSine,
+    OutBack,
 };
 
 inline double ease(Easing curve, double progress)
 {
+    if (std::isnan(progress))
+        return 0;
     const double t = std::clamp(progress, 0.0, 1.0);
     switch (curve) {
     case Easing::Linear:
@@ -35,7 +40,14 @@ inline double ease(Easing curve, double progress)
     case Easing::OutQuint:
         return 1 - std::pow(1 - t, 5);
     case Easing::OutSine:
-        return std::sin(t * 1.57079632679489661923);
+        return std::sin(t * std::numbers::pi / 2);
+    case Easing::InOutSine:
+        return -(std::cos(std::numbers::pi * t) - 1) / 2;
+    case Easing::OutBack: {
+        constexpr double overshoot = 1.70158;
+        const double x = t - 1;
+        return 1 + (overshoot + 1) * x * x * x + overshoot * x * x;
+    }
     }
     return t;
 }

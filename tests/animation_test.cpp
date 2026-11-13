@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <limits>
 
 #include "cadence/cadence.h"
 
@@ -12,6 +13,8 @@ TEST(Easing, ClampsInputAndReachesEndpoints)
     EXPECT_DOUBLE_EQ(0, ease(Easing::OutCubic, -1));
     EXPECT_DOUBLE_EQ(1, ease(Easing::OutCubic, 1));
     EXPECT_DOUBLE_EQ(1, ease(Easing::OutCubic, 2));
+    EXPECT_GT(ease(Easing::OutBack, 0.7), 1);
+    EXPECT_DOUBLE_EQ(0, ease(Easing::Linear, std::numeric_limits<double>::quiet_NaN()));
 }
 
 TEST(Timeline, AdvancesRepeatsAndAlternates)
@@ -89,6 +92,36 @@ TEST(Tween, InterpolatesGeometry)
     EXPECT_EQ((Rect{10, 25, 50, 65}), tween.value());
 }
 
+TEST(Interpolator, ClampsIntegralAndColorOvershoot)
+{
+    EXPECT_EQ(std::numeric_limits<int>::max(),
+              Interpolator<int>::mix(0, std::numeric_limits<int>::max(), 2));
+    EXPECT_EQ((Color{255, 255, 255, 255}), Interpolator<Color>::mix({0, 0, 0, 0}, {255, 255, 255, 255}, 2));
+}
+
+TEST(Keyframes, SamplesSegmentsWithTheirOwnEasing)
+{
+    KeyframeTrack<double> track;
+    ASSERT_TRUE(track.setKeyframes({{0, 0, Easing::OutQuad}, {0.5, 10, Easing::Linear}, {1, 20}}));
+
+    ASSERT_TRUE(track.sample(-1));
+    EXPECT_DOUBLE_EQ(0, *track.sample(-1));
+    EXPECT_DOUBLE_EQ(7.5, *track.sample(0.25));
+    EXPECT_DOUBLE_EQ(15, *track.sample(0.75));
+    EXPECT_DOUBLE_EQ(20, *track.sample(2));
+}
+
+TEST(Keyframes, RejectsInvalidOffsetsWithoutReplacingValidFrames)
+{
+    KeyframeTrack<double> track;
+    ASSERT_TRUE(track.setKeyframes({{0, 2}, {1, 8}}));
+    EXPECT_FALSE(track.setKeyframes({{0, 1}, {0, 2}}));
+    EXPECT_FALSE(track.setKeyframes({{0.8, 1}, {0.2, 2}}));
+    EXPECT_FALSE(track.setKeyframes({{0, 1}, {1.1, 2}}));
+    EXPECT_FALSE(track.sample(std::numeric_limits<double>::quiet_NaN()));
+    EXPECT_DOUBLE_EQ(5, *track.sample(0.5));
+}
+
 TEST(Spring, SettlesTowardsItsTarget)
 {
     Spring spring;
@@ -97,6 +130,16 @@ TEST(Spring, SettlesTowardsItsTarget)
     for (int i = 0; i < 240; ++i)
         spring.advance(std::chrono::duration<double>(1.0 / 60.0));
     EXPECT_NEAR(1, spring.value(), 0.001);
+    EXPECT_TRUE(spring.isSettled());
+}
+
+TEST(Spring, HandlesInvalidFrequencyAndInfiniteTimeStep)
+{
+    Spring spring(std::numeric_limits<double>::infinity());
+    spring.snap(0);
+    spring.setTarget(5);
+    spring.advance(std::chrono::duration<double>::infinity());
+    EXPECT_DOUBLE_EQ(5, spring.value());
     EXPECT_TRUE(spring.isSettled());
 }
 

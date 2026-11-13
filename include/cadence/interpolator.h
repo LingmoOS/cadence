@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <type_traits>
 
 namespace Cadence {
@@ -14,7 +15,17 @@ template<typename T>
 struct Interpolator<T, std::enable_if_t<std::is_arithmetic_v<T>>> {
     static T mix(T from, T to, double progress)
     {
-        return static_cast<T>(static_cast<double>(from) + (static_cast<double>(to) - from) * progress);
+        if (!std::isfinite(progress))
+            return from;
+        const long double value = static_cast<long double>(from)
+                + (static_cast<long double>(to) - static_cast<long double>(from)) * progress;
+        if constexpr (std::is_integral_v<T>) {
+            const long double rounded = std::round(value);
+            return static_cast<T>(std::clamp(rounded, static_cast<long double>(std::numeric_limits<T>::lowest()),
+                                             static_cast<long double>(std::numeric_limits<T>::max())));
+        } else {
+            return static_cast<T>(value);
+        }
     }
 };
 
@@ -55,7 +66,10 @@ struct Interpolator<Color> {
     static Color mix(Color from, Color to, double progress)
     {
         const auto channel = [progress](uint8_t a, uint8_t b) {
-            return static_cast<uint8_t>(std::lround(a + (static_cast<double>(b) - a) * progress));
+            if (!std::isfinite(progress))
+                return a;
+            const double value = a + (static_cast<double>(b) - a) * progress;
+            return static_cast<uint8_t>(std::lround(std::clamp(value, 0.0, 255.0)));
         };
         return {channel(from.r, to.r), channel(from.g, to.g), channel(from.b, to.b), channel(from.a, to.a)};
     }

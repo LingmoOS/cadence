@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(cadence VERSION 0.1.2 DESCRIPTION "Frame-driven animation primitives" LANGUAGES CXX)
+project(cadence VERSION 0.1.4 DESCRIPTION "Frame-driven animation primitives" LANGUAGES CXX)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
