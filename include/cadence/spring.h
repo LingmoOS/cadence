@@ -1,18 +1,20 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <functional>
 
 namespace Cadence {
 
-// Closed-form critically damped spring; advance with seconds from the prior frame.
+// Closed-form critically damped spring; advance with elapsed frame time.
 class Spring {
 public:
     explicit Spring(double angularFrequency = 18) : m_frequency(std::max(0.01, angularFrequency)) {}
 
     void setFrequency(double angularFrequency) { m_frequency = std::max(0.01, angularFrequency); }
     void setTarget(double target) { m_target = target; }
+    void setInitialVelocity(double velocity) { m_velocity = velocity; }
     void snap(double value)
     {
         m_value = m_target = value;
@@ -21,9 +23,10 @@ public:
             onValueChanged(m_value);
     }
 
-    double advance(double seconds)
+    template<typename Rep, typename Period>
+    double advance(std::chrono::duration<Rep, Period> elapsed)
     {
-        const double dt = std::clamp(seconds, 0.0, 0.05);
+        const double dt = std::max(0.0, std::chrono::duration<double>(elapsed).count());
         const double offset = m_value - m_target;
         const double c = m_velocity + m_frequency * offset;
         const double decay = std::exp(-m_frequency * dt);

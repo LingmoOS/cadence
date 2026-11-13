@@ -4,9 +4,9 @@ Cadence is a standalone, header-only C++20 library for deterministic, frame-driv
 
 ## First-version scope
 
-- `Timeline`: duration, easing, loops, alternating playback, pause and resume.
+- `Timeline`: chrono-typed duration, easing, loops, alternating playback, pause and resume; can read a supplied `Clock`.
 - `Tween<T>`: timestamp-driven interpolation for arithmetic types and `Color`.
-- `Spring`: closed-form critically damped scalar motion advanced by frame delta.
+- `Spring`: closed-form critically damped scalar motion advanced by chrono frame delta, with initial velocity support.
 - `ManualClock`: a small controllable clock for tests and adapters.
 
 The API is an initial foundation. It does not yet provide a scheduler, GUI adapters, keyframes, cancellation tokens, or automatic frame subscription.
@@ -24,17 +24,21 @@ ctest --test-dir build --output-on-failure
 ```cpp
 #include <cadence/cadence.h>
 
+using namespace std::chrono_literals;
+Cadence::ManualClock clock;
 Cadence::Tween<double> fade;
-fade.setDuration(180'000'000); // nanoseconds
+fade.setDuration(180ms);
 fade.setEasing(Cadence::Easing::OutCubic);
 fade.onValueChanged = [](double opacity) { /* update a view */ };
-fade.animateTo(1.0, 0.0, frameTimeNs);
+fade.setValue(0.0);
+fade.animateTo(1.0, clock);
 
 // Call once per rendered frame. The host owns frame scheduling.
-fade.advance(nextFrameTimeNs);
+clock.advance(16ms);
+fade.advance(clock);
 ```
 
-The caller should pass monotonic timestamps and continue advancing a tween until `isRunning()` becomes false. The Spring `advance()` argument is elapsed seconds, normally the monotonic frame delta.
+Use monotonic timestamps (or a monotonic `Clock`) and continue advancing a tween until `isRunning()` becomes false. Calling `animateTo()` again retargets from the tween's current value. `Spring::advance()` accepts any `std::chrono::duration` as elapsed time.
 
 ## Install
 

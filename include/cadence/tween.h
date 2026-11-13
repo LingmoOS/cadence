@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <utility>
 
 #include "cadence/easing.h"
 #include "cadence/interpolator.h"
@@ -18,9 +19,22 @@ public:
     void setLoops(int loops) { m_timeline.setLoops(loops); }
     void setAlternating(bool alternating) { m_timeline.setAlternating(alternating); }
 
-    void animateTo(T target, T current, Nanoseconds now)
+    void setValue(T value)
     {
-        m_from = current;
+        m_timeline.stop();
+        m_from = m_target = m_value = std::move(value);
+    }
+
+    void animateTo(T target, TimePoint now)
+    {
+        animateTo(std::move(target), m_value, now);
+    }
+
+    void animateTo(T target, const Clock &clock) { animateTo(std::move(target), clock.now()); }
+
+    void animateTo(T target, T current, TimePoint now)
+    {
+        m_from = std::move(current);
         m_target = target;
         m_timeline.onUpdate = [this](double progress) {
             m_value = ValueInterpolator::mix(m_from, m_target, progress);
@@ -35,7 +49,13 @@ public:
         m_timeline.start(now);
     }
 
-    bool advance(Nanoseconds now) { return m_timeline.advance(now); }
+    void animateTo(T target, T current, const Clock &clock)
+    {
+        animateTo(std::move(target), std::move(current), clock.now());
+    }
+
+    bool advance(TimePoint now) { return m_timeline.advance(now); }
+    bool advance(const Clock &clock) { return advance(clock.now()); }
     void stop() { m_timeline.stop(); }
     bool isRunning() const { return m_timeline.isRunning(); }
     const T &value() const { return m_value; }

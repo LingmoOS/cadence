@@ -1,7 +1,7 @@
 #pragma once
 
 #include <algorithm>
-#include <cstdint>
+#include <chrono>
 #include <functional>
 
 #include "cadence/clock.h"
@@ -11,18 +11,18 @@ namespace Cadence {
 
 class Timeline {
 public:
-    using Duration = uint64_t;
+    using Duration = std::chrono::nanoseconds;
     static constexpr int Infinite = -1;
 
-    void setDuration(Duration duration) { m_duration = std::max<Duration>(1, duration); }
+    void setDuration(Duration duration) { m_duration = std::max(Duration{1}, duration); }
     void setEasing(Easing easing) { m_easing = easing; }
-    void setLoops(int loops) { m_loops = loops; }
+    void setLoops(int loops) { m_loops = loops == Infinite ? Infinite : std::max(1, loops); }
     void setAlternating(bool alternating) { m_alternating = alternating; }
 
-    void start(Nanoseconds now)
+    void start(TimePoint now)
     {
         m_start = now;
-        m_elapsedBeforePause = 0;
+        m_elapsedBeforePause = Duration::zero();
         m_running = true;
         m_paused = false;
         m_progress = 0;
@@ -30,28 +30,32 @@ public:
             onUpdate(m_progress);
     }
 
+    void start(const Clock &clock) { start(clock.now()); }
+
     void stop() { m_running = m_paused = false; }
-    void pause(Nanoseconds now)
+    void pause(TimePoint now)
     {
         if (!m_running || m_paused)
             return;
-        m_elapsedBeforePause += now - m_start;
+        m_elapsedBeforePause += elapsedSince(m_start, now);
         m_paused = true;
     }
-    void resume(Nanoseconds now)
+    void pause(const Clock &clock) { pause(clock.now()); }
+    void resume(TimePoint now)
     {
         if (!m_running || !m_paused)
             return;
         m_start = now;
         m_paused = false;
     }
+    void resume(const Clock &clock) { resume(clock.now()); }
 
-    bool advance(Nanoseconds now)
+    bool advance(TimePoint now)
     {
         if (!m_running || m_paused)
             return false;
-        const Nanoseconds elapsed = m_elapsedBeforePause + (now - m_start);
-        const double cycles = static_cast<double>(elapsed) / static_cast<double>(m_duration);
+        const Duration elapsed = m_elapsedBeforePause + elapsedSince(m_start, now);
+        const double cycles = static_cast<double>(elapsed.count()) / static_cast<double>(m_duration.count());
         if (m_loops != Infinite && cycles >= m_loops) {
             m_progress = m_alternating && m_loops > 0 && m_loops % 2 == 0 ? 0 : 1;
             m_running = false;
@@ -71,6 +75,8 @@ public:
         return true;
     }
 
+    bool advance(const Clock &clock) { return advance(clock.now()); }
+
     bool isRunning() const { return m_running; }
     bool isPaused() const { return m_paused; }
     double progress() const { return m_progress; }
@@ -79,14 +85,16 @@ public:
     std::function<void()> onFinished;
 
 private:
-    Duration m_duration = 250'000'000;
+    static Duration elapsedSince(TimePoint start, TimePoint now) { return now > start ? now - start : Duration::zero(); }
+
+    Duration m_duration = std::chrono::milliseconds(250);
     Easing m_easing = Easing::InOutCubic;
     int m_loops = 1;
     bool m_alternating = false;
     bool m_running = false;
     bool m_paused = false;
-    Nanoseconds m_start = 0;
-    Nanoseconds m_elapsedBeforePause = 0;
+    TimePoint m_start = Duration::zero();
+    Duration m_elapsedBeforePause = Duration::zero();
     double m_progress = 0;
 };
 

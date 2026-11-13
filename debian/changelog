@@ -1,3 +1,10 @@
+cadence (0.1.1) unstable; urgency=medium
+
+  * Use chrono-typed frame time and support clock-driven timelines.
+  * Add continuous tween retargeting and spring initial velocity.
+
+ -- Lingmo OS Team <team@lingmo.org>  Sat, 14 Nov 2026 00:00:00 +0800
+
 cadence (0.1.0) unstable; urgency=medium
 
   * Initial Cadence animation primitives and deterministic tests.

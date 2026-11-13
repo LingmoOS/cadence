@@ -1,27 +1,27 @@
 #pragma once
 
-#include <cstdint>
+#include <chrono>
 
 namespace Cadence {
 
-using Nanoseconds = uint64_t;
+using TimePoint = std::chrono::nanoseconds;
 
 class Clock {
 public:
     virtual ~Clock() = default;
-    virtual Nanoseconds now() const = 0;
+    virtual TimePoint now() const = 0;
 };
 
 class ManualClock final : public Clock {
 public:
-    explicit ManualClock(Nanoseconds initial = 0) : m_now(initial) {}
+    explicit ManualClock(TimePoint initial = TimePoint::zero()) : m_now(initial) {}
 
-    Nanoseconds now() const override { return m_now; }
-    void set(Nanoseconds now) { m_now = now; }
-    void advance(Nanoseconds delta) { m_now += delta; }
+    TimePoint now() const override { return m_now; }
+    void set(TimePoint now) { m_now = now; }
+    void advance(TimePoint delta) { m_now += delta; }
 
 private:
-    Nanoseconds m_now;
+    TimePoint m_now;
 };
 
 } // namespace Cadence
