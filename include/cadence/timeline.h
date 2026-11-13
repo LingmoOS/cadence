@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <functional>
+#include <limits>
 
 #include "cadence/clock.h"
 #include "cadence/easing.h"
@@ -37,7 +38,7 @@ public:
     {
         if (!m_running || m_paused)
             return;
-        m_elapsedBeforePause += elapsedSince(m_start, now);
+        m_elapsedBeforePause = saturatedAdd(m_elapsedBeforePause, elapsedSince(m_start, now));
         m_paused = true;
     }
     void pause(const Clock &clock) { pause(clock.now()); }
@@ -54,9 +55,12 @@ public:
     {
         if (!m_running || m_paused)
             return false;
-        const Duration elapsed = m_elapsedBeforePause + elapsedSince(m_start, now);
-        const double cycles = static_cast<double>(elapsed.count()) / static_cast<double>(m_duration.count());
-        if (m_loops != Infinite && cycles >= m_loops) {
+        const Duration elapsed = saturatedAdd(m_elapsedBeforePause, elapsedSince(m_start, now));
+        const auto duration = m_duration.count();
+        const auto elapsedCount = elapsed.count();
+        const auto cycle = static_cast<uint64_t>(elapsedCount / duration);
+        const auto remainder = elapsedCount % duration;
+        if (m_loops != Infinite && cycle >= static_cast<uint64_t>(m_loops)) {
             m_progress = m_alternating && m_loops > 0 && m_loops % 2 == 0 ? 0 : 1;
             m_running = false;
             if (onUpdate)
@@ -65,8 +69,7 @@ public:
                 onFinished();
             return false;
         }
-        const auto cycle = static_cast<uint64_t>(cycles);
-        double t = cycles - static_cast<double>(cycle);
+        double t = static_cast<double>(remainder) / static_cast<double>(duration);
         if (m_alternating && cycle % 2)
             t = 1 - t;
         m_progress = ease(m_easing, t);
@@ -85,6 +88,14 @@ public:
     std::function<void()> onFinished;
 
 private:
+    static Duration saturatedAdd(Duration a, Duration b)
+    {
+        const auto maximum = std::numeric_limits<Duration::rep>::max();
+        if (b.count() > maximum - a.count())
+            return Duration::max();
+        return a + b;
+    }
+
     static Duration elapsedSince(TimePoint start, TimePoint now) { return now > start ? now - start : Duration::zero(); }
 
     Duration m_duration = std::chrono::milliseconds(250);

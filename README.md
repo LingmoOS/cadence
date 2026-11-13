@@ -5,7 +5,7 @@ Cadence is a standalone, header-only C++20 library for deterministic, frame-driv
 ## First-version scope
 
 - `Timeline`: chrono-typed duration, easing, loops, alternating playback, pause and resume; can read a supplied `Clock`.
-- `Tween<T>`: timestamp-driven interpolation for arithmetic types and `Color`.
+- `Tween<T>`: timestamp-driven interpolation for arithmetic types, `Color`, `Point`, `Size`, and `Rect`, with a specialization point for custom types.
 - `Spring`: closed-form critically damped scalar motion advanced by chrono frame delta, with initial velocity support.
 - `ManualClock`: a small controllable clock for tests and adapters.
 

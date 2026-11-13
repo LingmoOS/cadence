@@ -31,6 +31,18 @@ TEST(Timeline, AdvancesRepeatsAndAlternates)
     EXPECT_DOUBLE_EQ(0, timeline.progress());
 }
 
+TEST(Timeline, InfiniteLoopsRemainDefinedAtLargeElapsedTimes)
+{
+    Timeline timeline;
+    timeline.setDuration(1ns);
+    timeline.setLoops(Timeline::Infinite);
+    timeline.setEasing(Easing::Linear);
+    timeline.start(0ns);
+
+    EXPECT_TRUE(timeline.advance(std::chrono::nanoseconds::max()));
+    EXPECT_DOUBLE_EQ(0, timeline.progress());
+}
+
 TEST(Timeline, PauseAndResumePreserveElapsedTime)
 {
     Timeline timeline;
@@ -65,6 +77,16 @@ TEST(Tween, RetargetsValuesAndInterpolatesColor)
     color.animateTo({255, 100, 0, 255}, {0, 0, 0, 255}, 0ns);
     color.advance(50ns);
     EXPECT_EQ((Color{128, 50, 0, 255}), color.value());
+}
+
+TEST(Tween, InterpolatesGeometry)
+{
+    Tween<Rect> tween;
+    tween.setDuration(100ns);
+    tween.setEasing(Easing::Linear);
+    tween.animateTo({20, 40, 80, 100}, {0, 10, 20, 30}, 0ns);
+    tween.advance(50ns);
+    EXPECT_EQ((Rect{10, 25, 50, 65}), tween.value());
 }
 
 TEST(Spring, SettlesTowardsItsTarget)

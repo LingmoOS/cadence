@@ -1,3 +1,10 @@
+cadence (0.1.2) unstable; urgency=medium
+
+  * Add point, size and rectangle interpolation.
+  * Keep loop progress precise for large elapsed times.
+
+ -- Lingmo OS Team <team@lingmo.org>  Sat, 14 Nov 2026 00:00:00 +0800
+
 cadence (0.1.1) unstable; urgency=medium
 
   * Use chrono-typed frame time and support clock-driven timelines.
